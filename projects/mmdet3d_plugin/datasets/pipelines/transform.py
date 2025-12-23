@@ -97,6 +97,8 @@ class NuScenesSparse4DAdaptor(object):
             'gt_map_labels', 
             'gt_map_pts',
             'gt_agent_fut_trajs',
+            'gt_agent_fut_trajs_6dof',
+            'input_agent_fut_trajs_6dof',
             'gt_agent_fut_masks',
         ]:
             if key not in input_dict:
@@ -105,6 +107,8 @@ class NuScenesSparse4DAdaptor(object):
 
         for key in [
             'gt_ego_fut_trajs',
+            'gt_ego_fut_trajs_6dof',
+            'input_ego_fut_trajs_6dof',
             'gt_ego_fut_masks',
             'gt_ego_fut_cmd',
             'ego_status',
@@ -154,6 +158,8 @@ class InstanceNameFilter(object):
             input_dict["instance_inds"] = input_dict["instance_inds"][gt_bboxes_mask]
         if "gt_agent_fut_trajs" in input_dict:
             input_dict["gt_agent_fut_trajs"] = input_dict["gt_agent_fut_trajs"][gt_bboxes_mask]
+            input_dict["gt_agent_fut_trajs_6dof"] = input_dict["gt_agent_fut_trajs_6dof"][gt_bboxes_mask]
+            input_dict["input_agent_fut_trajs_6dof"] = input_dict["input_agent_fut_trajs_6dof"][gt_bboxes_mask]
             input_dict["gt_agent_fut_masks"] = input_dict["gt_agent_fut_masks"][gt_bboxes_mask]
         return input_dict
 
@@ -193,6 +199,8 @@ class CircleObjectRangeFilter(object):
             input_dict["instance_inds"] = input_dict["instance_inds"][mask]
         if "gt_agent_fut_trajs" in input_dict:
             input_dict["gt_agent_fut_trajs"] = input_dict["gt_agent_fut_trajs"][mask]
+            input_dict["gt_agent_fut_trajs_6dof"] = input_dict["gt_agent_fut_trajs_6dof"][mask]
+            input_dict["input_agent_fut_trajs_6dof"] = input_dict["input_agent_fut_trajs_6dof"][mask]
             input_dict["gt_agent_fut_masks"] = input_dict["gt_agent_fut_masks"][mask]
         return input_dict
 

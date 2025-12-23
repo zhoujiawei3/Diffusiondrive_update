@@ -160,12 +160,18 @@ class NuScenes3DDataset(Dataset):
         res = []
 
         curr_sequence = 0
+        scene_token=''
+        # for idx in range(len(self.data_infos)):
+        #     if idx != 0 and len(self.data_infos[idx]["sweeps"]) == 0:
+        #         # Not first frame and # of sweeps is 0 -> new sequence
+        #         curr_sequence += 1
+        #     res.append(curr_sequence)
         for idx in range(len(self.data_infos)):
-            if idx != 0 and len(self.data_infos[idx]["sweeps"]) == 0:
+            if idx != 0 and scene_token!=self.data_infos[idx]["scene_token"]:
                 # Not first frame and # of sweeps is 0 -> new sequence
                 curr_sequence += 1
+            scene_token=self.data_infos[idx]["scene_token"]
             res.append(curr_sequence)
-
         self.flag = np.array(res, dtype=np.int64)
 
         if self.sequences_split_num != 1:
@@ -279,7 +285,8 @@ class NuScenes3DDataset(Dataset):
 
     def load_annotations(self, ann_file):
         data = mmcv.load(ann_file, file_format="pkl")
-        data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
+        # data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
+        data_infos = list(sorted(data["infos"], key=lambda e: (e["scene_token"], e["timestamp"])))
         data_infos = data_infos[:: self.load_interval]
         self.metadata = data["metadata"]
         self.version = self.metadata["version"]
@@ -393,19 +400,26 @@ class NuScenes3DDataset(Dataset):
             anns_results["instance_inds"] = instance_inds
             
         if 'gt_agent_fut_trajs' in info:
-            anns_results['gt_agent_fut_trajs'] = info['gt_agent_fut_trajs'][mask]
+            anns_results['gt_agent_fut_trajs'] = info['gt_agent_fut_trajs'][mask]            
             anns_results['gt_agent_fut_masks'] = info['gt_agent_fut_masks'][mask]
+            anns_results['gt_agent_fut_trajs_6dof'] = info['gt_agent_fut_trajs_6dof'][mask]
+            anns_results['input_agent_fut_trajs_6dof'] = info['input_agent_fut_trajs_6dof'][mask]
+
 
         if 'gt_ego_fut_trajs' in info:
             anns_results['gt_ego_fut_trajs'] = info['gt_ego_fut_trajs']
+            anns_results['gt_ego_fut_trajs_6dof']=info['gt_ego_fut_trajs_6dof']
+            anns_results['input_ego_fut_trajs_6dof'] = info['input_ego_fut_trajs_6dof']
             anns_results['gt_ego_fut_masks'] = info['gt_ego_fut_masks']
             anns_results['gt_ego_fut_cmd'] = info['gt_ego_fut_cmd']
         
-            ## get future box for planning eval
+            ## get future box for planning eval 
             fut_ts = int(info['gt_ego_fut_masks'].sum())
             fut_boxes = []
             cur_scene_token = info["scene_token"]
             cur_T_global = get_T_global(info)
+            max_length = len(self.data_infos)#这个修改是不对的，只是未来不报错
+            fut_ts = min(fut_ts, max_length - index - 1)
             for i in range(1, fut_ts + 1):
                 fut_info = self.data_infos[index + i]
                 fut_scene_token = fut_info["scene_token"]
@@ -873,7 +887,7 @@ class NuScenes3DDataset(Dataset):
             results_dict.update(motion_results_dict)
         
         if eval_mode['with_planning']:
-            from .evaluation.planning.planning_eval import planning_eval
+            from .evaluation.planning.planning_eval_v2 import planning_eval
             planning_results_dict = planning_eval(results, self.eval_config, logger=logger)
             results_dict.update(planning_results_dict)
 

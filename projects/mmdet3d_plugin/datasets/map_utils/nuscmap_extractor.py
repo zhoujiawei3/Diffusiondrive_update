@@ -21,7 +21,7 @@ class NuscMapExtractor(object):
         self.roi_size = roi_size
         self.MAPS = ['boston-seaport', 'singapore-hollandvillage',
                      'singapore-onenorth', 'singapore-queenstown']
-        
+        self.MAPS = ["Town01", "Town02", "Town03", "Town04","Town05","Town06","Town07","Town10HD","Town11","Town12","Town13","Town15"]
         self.nusc_maps = {}
         self.map_explorer = {}
         for loc in self.MAPS:
@@ -156,4 +156,73 @@ class NuscMapExtractor(object):
             boundary=boundaries, # List[LineString]
             drivable_area=drivable_areas, # List[Polygon],
         )
+    def get_map_geom_use_drivable_area(self, 
+                     location: str, 
+                     translation: Union[List, NDArray],
+                     rotation: Union[List, NDArray]) -> Dict[str, List[Union[LineString, Polygon]]]:
+        ''' Extract geometries given `location` and self pose, self may be lidar or ego.
+        
+        Args:
+            location (str): city name
+            translation (array): self2global translation, shape (3,)
+            rotation (array): self2global quaternion, shape (4, )
+            
+        Returns:
+            geometries (Dict): extracted geometries by category.
+        '''
 
+        # (center_x, center_y, len_y, len_x) in nuscenes format
+        patch_box = (translation[0], translation[1], 
+                self.roi_size[1], self.roi_size[0])
+        rotation = Quaternion(rotation)
+        yaw = quaternion_yaw(rotation) / np.pi * 180
+
+        # get dividers
+        lane_dividers = self.map_explorer[location]._get_layer_line(
+                    patch_box, yaw, 'lane_divider')
+        
+        road_dividers = self.map_explorer[location]._get_layer_line(
+                    patch_box, yaw, 'road_divider')
+        
+        all_dividers = []
+        for line in lane_dividers + road_dividers:
+            all_dividers += split_collections(line)
+
+        # get ped crossings
+        ped_crossings = []
+        ped = self.map_explorer[location]._get_layer_polygon(
+                    patch_box, yaw, 'ped_crossing')
+        
+        for p in ped:
+            ped_crossings += split_collections(p)
+        # some ped crossings are split into several small parts
+        # we need to merge them
+        ped_crossings = self._union_ped(ped_crossings)
+        
+        ped_crossing_lines = []
+        for p in ped_crossings:
+            # extract exteriors to get a closed polyline
+            line = get_ped_crossing_contour(p, self.local_patch)
+            if line is not None:
+                ped_crossing_lines.append(line)
+
+        # get boundaries
+        # we take the union of road segments and lanes as drivable areas
+        # we don't take drivable area layer in nuScenes since its definition may be ambiguous
+        drivable_areas = self.map_explorer[location]._get_layer_polygon(
+                    patch_box, yaw, 'drivable_area')
+        
+        drivable_areas_output = []
+        for multipolygon in drivable_areas:
+
+            drivable_areas_output += split_collections(multipolygon)
+        
+        # boundaries are defined as the contour of drivable areas
+        boundaries = get_drivable_area_contour(drivable_areas_output, self.roi_size)
+
+        return dict(
+            divider=all_dividers, # List[LineString]
+            ped_crossing=ped_crossing_lines, # List[LineString]
+            boundary=boundaries, # List[LineString]
+            drivable_area=drivable_areas, # List[Polygon],
+        )

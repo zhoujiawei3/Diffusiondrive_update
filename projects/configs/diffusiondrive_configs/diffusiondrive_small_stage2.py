@@ -1,7 +1,7 @@
 # ================ base config ===================
-version = 'mini'
+# version = 'mini'
 version = 'trainval'
-length = {'trainval': 28130, 'mini': 323}
+length = {'trainval': 652, 'mini': 323}
 
 plugin = True
 plugin_dir = "projects/mmdet3d_plugin/"
@@ -10,11 +10,11 @@ log_level = "INFO"
 work_dir = None
 
 total_batch_size = 48
-num_gpus = 8
+num_gpus = 2
 batch_size = total_batch_size // num_gpus
 num_iters_per_epoch = int(length[version] // (num_gpus * batch_size))
-num_epochs = 10
-checkpoint_epoch_interval = 10
+num_epochs = 1000
+checkpoint_epoch_interval = 50
 
 checkpoint_config = dict(
     interval=num_iters_per_epoch * checkpoint_epoch_interval
@@ -110,12 +110,12 @@ model = dict(
         relu_before_extra_convs=True,
         in_channels=[256, 512, 1024, 2048],
     ),
-    depth_branch=dict(  # for auxiliary supervision only
-        type="DenseDepthNet",
-        embed_dims=embed_dims,
-        num_depth_layers=num_depth_layers,
-        loss_weight=0.2,
-    ),
+    # depth_branch=dict(  # for auxiliary supervision only
+    #     type="DenseDepthNet",
+    #     embed_dims=embed_dims,
+    #     num_depth_layers=num_depth_layers,
+    #     loss_weight=0.2,
+    # ),
     head=dict(
         type="V1SparseDriveHead",
         task_config=task_config,
@@ -397,7 +397,7 @@ model = dict(
             task_prefix='map',
         ),
         motion_plan_head=dict(
-            type='V13MotionPlanningHead', # choose anchor query based on cmd
+            type='V14MotionPlanningHead', # choose anchor query based on cmd
             fut_ts=fut_ts,
             fut_mode=fut_mode,
             ego_fut_ts=ego_fut_ts,
@@ -436,12 +436,13 @@ model = dict(
                     # "modulation",
                     "agent_cross_gnn",
                     "norm",
-                    "anchor_cross_gnn",
+                    # "anchor_cross_gnn",
+                    "map_cross_gnn",
                     "norm",
                     # "modulation",
                     "ffn",                    
                     "norm",
-                    "modulation",
+                    # "modulation",
                     "diff_refine",
                 ] * 2
             ),
@@ -493,12 +494,12 @@ model = dict(
                 ego_fut_mode=ego_fut_mode,
             ),
             diff_refine_layer=dict(
-                type="V4DiffMotionPlanningRefinementModule",
+                type="V4_2DiffMotionPlanningRefinementModule",
                 embed_dims=embed_dims,
                 fut_ts=fut_ts,
                 fut_mode=fut_mode,
                 ego_fut_ts=ego_fut_ts,
-                ego_fut_mode=ego_fut_mode,
+                ego_fut_mode=1,
                 if_zeroinit_reg=False,
             ),
             modulation_layer=dict(
@@ -508,7 +509,7 @@ model = dict(
                 if_zeroinit_scale=False,
             ),
             traj_pooler_layer=dict(
-                type="V1TrajPooler",
+                type="V1_2TrajPooler",
                 embed_dims=embed_dims,
                 ego_fut_ts=ego_fut_ts,
             ),
@@ -524,7 +525,7 @@ model = dict(
             ),
             motion_loss_reg=dict(type='L1Loss', loss_weight=0.2),
             planning_sampler=dict(
-                type="V1PlanningTarget",
+                type="V1_2PlanningTarget",
                 ego_fut_ts=ego_fut_ts,
                 ego_fut_mode=ego_fut_mode,
             ),
@@ -539,7 +540,7 @@ model = dict(
             plan_loss_status=dict(type='L1Loss', loss_weight=1.0),
             motion_decoder=dict(type="SparseBox3DMotionDecoder"),
             planning_decoder=dict(
-                type="HierarchicalPlanningDecoder",
+                type="v0_2HierarchicalPlanningDecoder",
                 ego_fut_ts=ego_fut_ts,
                 ego_fut_mode=ego_fut_mode,
                 use_rescore=True,
@@ -564,8 +565,8 @@ train_pipeline = [
     dict(
         type="LoadPointsFromFile",
         coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
+        load_dim=4,
+        use_dim=4,
         file_client_args=file_client_args,
     ),
     dict(type="ResizeCropFlipImage"),
@@ -604,8 +605,12 @@ train_pipeline = [
             'gt_map_labels', 
             'gt_map_pts',
             'gt_agent_fut_trajs',
+            'gt_agent_fut_trajs_6dof',
+            'input_agent_fut_trajs_6dof',
             'gt_agent_fut_masks',
             'gt_ego_fut_trajs',
+            'gt_ego_fut_trajs_6dof',
+            'input_ego_fut_trajs_6dof',
             'gt_ego_fut_masks',
             'gt_ego_fut_cmd',
             'ego_status',
@@ -627,6 +632,8 @@ test_pipeline = [
             "image_wh",
             'ego_status',
             'gt_ego_fut_trajs',
+            'gt_ego_fut_trajs_6dof',
+            'input_ego_fut_trajs_6dof',
             'gt_ego_fut_masks',
             'gt_ego_fut_cmd',
         ],
@@ -652,8 +659,12 @@ eval_pipeline = [
             "gt_bboxes_3d",
             "gt_labels_3d",
             'gt_agent_fut_trajs',
+            'gt_agent_fut_trajs_6dof',
+            'input_agent_fut_trajs_6dof',
             'gt_agent_fut_masks',
             'gt_ego_fut_trajs',
+            'gt_ego_fut_trajs_6dof',
+            'input_ego_fut_trajs_6dof',
             'gt_ego_fut_masks', 
             'gt_ego_fut_cmd',
             'fut_boxes'
@@ -705,7 +716,7 @@ data = dict(
         test_mode=False,
         data_aug_conf=data_aug_conf,
         with_seq_flag=True,
-        sequences_split_num=2,
+        sequences_split_num=1,
         keep_consistent_seq_aug=True,
     ),
     val=dict(
@@ -730,6 +741,7 @@ data = dict(
 optimizer = dict(
     type="AdamW",
     lr=3e-4,
+    # lr = 2.5e-5,
     weight_decay=0.001,
     paramwise_cfg=dict(
         custom_keys={

@@ -22,7 +22,7 @@ plot_choices = dict(
     map = True,
     planning = True,
 )
-START = 0
+START = 1
 END = 81
 INTERVAL = 1
 
@@ -47,18 +47,16 @@ class Visualizer:
         data = self.dataset.get_data_info(index)
         result = self.results[index]['img_bbox']
 
-        # cam_pred_path = self.cam_render.render(data, result, index)
-        # import ipdb; ipdb.set_trace()
-        bev_gt_path, bev_pred_path = self.bev_render.render(data, result, index)
-        
-        import ipdb; ipdb.set_trace()
-        self.combine(bev_gt_path, bev_pred_path, cam_pred_path, index)
+        bev_gt_path, bev_pred_path,bev_input_path = self.bev_render.render(data, result, index)
+        cam_pred_path = self.cam_render.render(data, result, index)
+        self.combine(bev_gt_path, bev_pred_path, bev_input_path, cam_pred_path, index)
     
-    def combine(self, bev_gt_path, bev_pred_path, cam_pred_path, index):
+    def combine(self, bev_gt_path, bev_pred_path, bev_input_path, cam_pred_path, index):
         bev_gt = cv2.imread(bev_gt_path)
         bev_image = cv2.imread(bev_pred_path)
+        bev_input = cv2.imread(bev_input_path)
         cam_image = cv2.imread(cam_pred_path)
-        merge_image = cv2.hconcat([cam_image, bev_image, bev_gt])
+        merge_image = cv2.hconcat([cam_image, bev_image, bev_input, bev_gt])
         save_path = os.path.join(self.combine_dir, str(index).zfill(4) + '.jpg')
         cv2.imwrite(save_path, merge_image)
 

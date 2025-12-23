@@ -19,6 +19,7 @@ from .motion import *
 # add diffusion
 from .sparsedrive_v1 import V1SparseDrive
 from .sparsedrive_head_v1 import V1SparseDriveHead
+from .sparsedrive_head_v1 import V1_0SparseDriveHead
 
 __all__ = [
     "SparseDrive",

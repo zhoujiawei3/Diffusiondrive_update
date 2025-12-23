@@ -330,7 +330,7 @@ class V13MotionPlanningHead(BaseModule):
         prediction,
     ):
         cls_ids = classification.argmax(dim=-1)
-        motion_anchor = self.motion_anchor[cls_ids]
+        motion_anchor = self.motion_anchor[cls_ids] # bs, num_anchor, fut_mode, fut_ts, 2
         prediction = prediction.detach()
         return self._agent2lidar(motion_anchor, prediction)
 
@@ -577,7 +577,7 @@ class V13MotionPlanningHead(BaseModule):
             anchor_handler,
         )
         ego_anchor_embed = anchor_encoder(ego_anchor)
-        temp_anchor_embed = anchor_encoder(temp_anchor)
+        temp_anchor_embed = anchor_encoder(temp_anchor)#这里面既有instance也有ego应该
         temp_instance_feature = temp_instance_feature.flatten(0, 1)
         temp_anchor_embed = temp_anchor_embed.flatten(0, 1)
         temp_mask = temp_mask.flatten(0, 1)
@@ -588,10 +588,12 @@ class V13MotionPlanningHead(BaseModule):
             self.plan_anchor[None], (bs, 1, 1, 1, 1)
         )# bs, cmd_mode, modal_mode, ego_fut_ts, 2
 
-        # =========== mode query init ===========
-        motion_mode_query = self.motion_anchor_encoder(gen_sineembed_for_position(motion_anchor[..., -1, :]))
+        # =========== mode query init =========== #这里就是lidar坐标系下的 自车位置序列和他车位置序列了（这个他车位置的起点还是0，0，也就是以初始帧为准）
+        motion_mode_query = self.motion_anchor_encoder(gen_sineembed_for_position(motion_anchor[..., -1, :]))#这里只给了最后一个坐标
         plan_pos = gen_sineembed_for_position(plan_anchor[..., -1, :])
         plan_mode_query = self.plan_anchor_encoder(plan_pos).flatten(1, 2).unsqueeze(1)
+
+        
 
         # # =========== plan query init ===========
         # gt_ego_fut_trajs = metas['gt_ego_fut_trajs']
@@ -670,7 +672,7 @@ class V13MotionPlanningHead(BaseModule):
                     plan_cls,
                     plan_reg,
                     plan_status,
-                ) = self.interact_layers[i](
+                ) = self.interact_layers[i]( #这个refine网络，作者也修改了，里面应该对于plan_query没有做改动，plan_cls也为空，plan_reg也为空
                     motion_query,
                     plan_query,
                     instance_feature[:, num_anchor:],
@@ -710,18 +712,35 @@ class V13MotionPlanningHead(BaseModule):
         # place_holder_num = self.ego_fut_mode - 1
         # odo_info_fut_placeholder = torch.randn(bs,place_holder_num,self.ego_fut_ts,2,device=device)/3
         # import ipdb;ipdb.set_trace()
+
+        input_ego_fut_trajs_6dof = metas['input_ego_fut_trajs_6dof'] # shape like (bs, ego_fut_ts, 6) 已经是相对前一帧的变化量了
+        
+        input_ego_fut_trajs_6dof = input_ego_fut_trajs_6dof.unsqueeze(1)# (bs, 1, ego_fut_ts, 6)
+        # odo_info_fut_ego_6dof = self.normalize_ego_fut_trajs(input_ego_fut_trajs_6dof) # (bs, 1, ego_fut_ts, 6)
+        # odo_info_fut_ego_6dof = odo_info_fut_ego_6dof.view(bs,self.ego_fut_ts,6)
+        
+        #To do normalize
+        #To do 加噪音
+
+
+        
+
+
+
+
+
         bs_indices = torch.arange(bs, device=plan_query.device)
         cmd = metas['gt_ego_fut_cmd'].argmax(dim=-1)
         # cmd_plan_nav_query = plan_nav_query[bs_indices, cmd]
 
         cmd_plan_anchor = plan_anchor[bs_indices, cmd]
         zeros_cat = torch.zeros(bs, 6, 1, 2, device=device)
-        cmd_plan_anchor = torch.cat([zeros_cat,cmd_plan_anchor], dim=2)
-        tgt_cmd_plan_anchor = cmd_plan_anchor[:,:,1:,:] - cmd_plan_anchor[:,:,:-1,:]
-        odo_info_fut = self.normalize_ego_fut_trajs(tgt_cmd_plan_anchor)
+        cmd_plan_anchor = torch.cat([zeros_cat,cmd_plan_anchor], dim=2)# (bs, 6, ego_fut_ts+1, 2)
+        tgt_cmd_plan_anchor = cmd_plan_anchor[:,:,1:,:] - cmd_plan_anchor[:,:,:-1,:]# (bs, 6, ego_fut_ts, 2)
+        odo_info_fut = self.normalize_ego_fut_trajs(tgt_cmd_plan_anchor)# (bs, 6, ego_fut_ts, 2)
         # import ipdb;ipdb.set_trace()
         # odo_info_fut = torch.cat([odo_info_fut.view(bs,1,self.ego_fut_ts,2), odo_info_fut_placeholder], dim=1)
-        odo_info_fut = odo_info_fut.view(bs*self.ego_fut_mode,self.ego_fut_ts,2)
+        odo_info_fut = odo_info_fut.view(bs*self.ego_fut_mode,self.ego_fut_ts,2) # (bs* 6, ego_fut_ts, 2)
         # odo_info_fut = odo_info_fut * self.noise_scale
         # TODO: multi mode, need to concat noise for other modes
 
@@ -748,7 +767,7 @@ class V13MotionPlanningHead(BaseModule):
         # import ipdb;ipdb.set_trace()
         diff_plan_reg = noisy_traj_points
         traj_pos_embed = gen_sineembed_for_position(diff_plan_reg,hidden_dim=128)
-        traj_pos_embed = traj_pos_embed.flatten(-2)
+        traj_pos_embed = traj_pos_embed.flatten(-2)#36，6，128
         traj_feature = self.plan_pos_encoder(traj_pos_embed)
         traj_feature = traj_feature.view(bs,self.ego_fut_mode,-1)
         # traj_feature = traj_pos_feature
@@ -792,7 +811,7 @@ class V13MotionPlanningHead(BaseModule):
                 )
             elif op == "agent_cross_gnn":
                 # import ipdb;ipdb.set_trace()
-                traj_feature = self.diff_graph_model(
+                traj_feature = self.diff_graph_model( #这个看起来就是正常的较差注意力，但是位置编码不是加到里面，而是cat到特征维度
                     i,
                     traj_feature,
                     instance_feature_selected,
@@ -1271,11 +1290,11 @@ class V13MotionPlanningHead(BaseModule):
                 reg_target, 
                 reg_weight, 
             ) = self.planning_sampler.sample(
-                diffusion_classification,
-                diffusion_prediction,
+                diffusion_classification, 
+                diffusion_prediction,# 6,1,1,6,2
                 tgt_cmd_plan_anchor,
-                data['gt_ego_fut_trajs'],
-                data['gt_ego_fut_masks'],
+                data['gt_ego_fut_trajs'],#6,6,2
+                data['gt_ego_fut_masks'],#6,6
                 data,
             )
             cls = cls.flatten(end_dim=1)

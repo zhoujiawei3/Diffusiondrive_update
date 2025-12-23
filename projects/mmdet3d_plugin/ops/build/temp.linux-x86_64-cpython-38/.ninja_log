@@ -1,0 +1,3 @@
+# ninja log v7
+1	18402	1763542591070204668	/data3/zhoujiawei/DiffusionDrive_origin/projects/mmdet3d_plugin/ops/build/temp.linux-x86_64-cpython-38/src/deformable_aggregation_cuda.o	ff0ee4150bf0943d
+1	21894	1763542591070204668	/data3/zhoujiawei/DiffusionDrive_origin/projects/mmdet3d_plugin/ops/build/temp.linux-x86_64-cpython-38/src/deformable_aggregation.o	3462d53371c7632a

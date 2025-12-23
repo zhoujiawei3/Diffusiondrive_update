@@ -59,10 +59,10 @@ class CamRender:
     ):
         self.reset_canvas()
         self.render_image_data(data, index)
-        # self.draw_detection_pred(data, result)
-        # self.draw_motion_pred(data, result)
-        # self.draw_planning_pred(data, result)
-        save_path = os.path.join(self.pred_dir, str(index).zfill(4) + '.png')
+        self.draw_detection_pred(data, result)
+        self.draw_motion_pred(data, result)
+        self.draw_planning_pred(data, result)
+        save_path = os.path.join(self.pred_dir, str(index).zfill(4) + '.jpg')
         self.save_fig(save_path)
         return save_path
 
@@ -92,7 +92,7 @@ class CamRender:
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0,
                             hspace=0, wspace=0)
         plt.margins(0, 0)
-        plt.savefig(filename, format='png', dpi=500)
+        plt.savefig(filename)
 
     def render_image_data(self, data, index):
         """Load and annotate image based on the provided path."""
@@ -194,7 +194,7 @@ class CamRender:
 
         
     def draw_planning_pred(self, data, result):
-        if not (self.plot_choices['draw_pred'] and self.plot_choices['planning'] and "planning" in result):
+        if not (self.plot_choices['draw_pred'] and self.plot_choices['planning'] and "final_planning" in result):
             return
         # for j, cam in enumerate(CAM_NAMES_NUSC[1]):
         #     idx = CAM_NAMES_NUSC_converter.index(cam)
@@ -248,7 +248,7 @@ class CamRender:
 
         # mode_idx = plan_score.argmax()
         # plan_traj = plan_trajs[mode_idx]
-        plan_traj = result["final_planning"]
+        plan_traj = result["final_planning"][:,:2]
         plan_traj = np.concatenate((np.zeros((1, 2)), plan_traj), axis=0)
         traj_expand = np.ones((plan_traj.shape[0], 1)) * -1.8
         plan_traj = np.concatenate([plan_traj, traj_expand], axis=1)

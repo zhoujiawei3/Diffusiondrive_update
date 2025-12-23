@@ -50,9 +50,18 @@ def get_drivable_area_contour(drivable_areas: List[Polygon],
     interiors = []
     
     for poly in drivable_areas:
-        exteriors.append(poly.exterior)
-        for inter in poly.interiors:
-            interiors.append(inter)
+        if poly.geom_type == 'GeometryCollection':
+            # Handle GeometryCollection by processing each geometry in it
+            for g in poly.geoms:
+                if g.geom_type == 'Polygon':
+                    exteriors.append(g.exterior)
+                    for inter in g.interiors:
+                        interiors.append(inter)
+        elif poly.geom_type == 'Polygon':
+            exteriors.append(poly.exterior)
+            for inter in poly.interiors:
+                interiors.append(inter)
+        # Skip other geometry types that are not polygons
     
     results = []
     for ext in exteriors:

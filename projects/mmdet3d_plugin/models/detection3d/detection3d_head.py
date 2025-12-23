@@ -307,7 +307,7 @@ class Sparse4DHead(BaseModule):
                     instance_feature, anchor = self.instance_bank.update(
                         instance_feature, anchor, cls
                     )
-                    if (
+                    if (#没进去
                         dn_metas is not None
                         and self.sampler.num_temp_dn_groups > 0
                         and dn_id_target is not None

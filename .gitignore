@@ -1,17 +1,18 @@
-# Ignore job-related directories
-job*/
+# Ignore job-related directories (only root level)
+/job*
+job/
 
-# Ignore data directories
-data*/
+# Ignore data directories (only root level)
+/data*
 
-# Ignore visualization directories
-vis*/
+# Ignore visualization directories (only root level)
+/vis*
 
-# Ignore work directories
-work_dirs*/
+# Ignore work directories (only root level)
+/work_dirs*
 
-# Ignore checkpoint directories
-ckpts*/
+# Ignore checkpoint directories (only root level)
+/ckpts*
 
 # Common Python ignores
 __pycache__/

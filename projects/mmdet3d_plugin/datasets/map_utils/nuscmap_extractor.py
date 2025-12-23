@@ -181,13 +181,12 @@ class NuscMapExtractor(object):
         lane_dividers = self.map_explorer[location]._get_layer_line(
                     patch_box, yaw, 'lane_divider')
         
-        road_dividers = self.map_explorer[location]._get_layer_line(
-                    patch_box, yaw, 'road_divider')
+        # road_dividers = self.map_explorer[location]._get_layer_line(
+        #             patch_box, yaw, 'road_divider')
         
         all_dividers = []
-        for line in lane_dividers + road_dividers:
+        for line in lane_dividers: #+ road_dividers:
             all_dividers += split_collections(line)
-
         # get ped crossings
         ped_crossings = []
         ped = self.map_explorer[location]._get_layer_polygon(
@@ -209,16 +208,32 @@ class NuscMapExtractor(object):
         # get boundaries
         # we take the union of road segments and lanes as drivable areas
         # we don't take drivable area layer in nuScenes since its definition may be ambiguous
-        drivable_areas = self.map_explorer[location]._get_layer_polygon(
-                    patch_box, yaw, 'drivable_area')
+        # drivable_areas = self.map_explorer[location]._get_layer_polygon(
+        #             patch_box, yaw, 'drivable_area')
         
-        drivable_areas_output = []
-        for multipolygon in drivable_areas:
+        # drivable_areas_output = []
+        # for multipolygon in drivable_areas:
 
-            drivable_areas_output += split_collections(multipolygon)
+        #     drivable_areas_output += split_collections(multipolygon)
+        
+        # # boundaries are defined as the contour of drivable areas
+        # boundaries = get_drivable_area_contour(drivable_areas_output, self.roi_size)
+
+
+        road_segments = self.map_explorer[location]._get_layer_polygon(
+                    patch_box, yaw, 'road_segment')
+        lanes = self.map_explorer[location]._get_layer_polygon(
+                    patch_box, yaw, 'lane')
+        union_roads = ops.unary_union(road_segments)
+        union_lanes = ops.unary_union(lanes)
+        drivable_areas = ops.unary_union([union_roads, union_lanes])
+        
+        drivable_areas = split_collections(drivable_areas)
         
         # boundaries are defined as the contour of drivable areas
-        boundaries = get_drivable_area_contour(drivable_areas_output, self.roi_size)
+        boundaries = get_drivable_area_contour(drivable_areas, self.roi_size)
+        # drivable_areas = None
+        # boundaries =  None
 
         return dict(
             divider=all_dividers, # List[LineString]

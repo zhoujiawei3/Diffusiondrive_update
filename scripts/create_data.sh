@@ -14,5 +14,6 @@ python tools_diffusiondrive/data_converter/nuscenes_converter_carla_ego.py nusce
     --canbus ./data/nuscenes \
     --out-dir ./data/infos/ \
     --extra-tag nuscenes \
-    --version v1.0
+    --version v1.0 \
+    --workers 80
 

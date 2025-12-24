@@ -181,11 +181,11 @@ class NuscMapExtractor(object):
         lane_dividers = self.map_explorer[location]._get_layer_line(
                     patch_box, yaw, 'lane_divider')
         
-        # road_dividers = self.map_explorer[location]._get_layer_line(
-        #             patch_box, yaw, 'road_divider')
+        road_dividers = self.map_explorer[location]._get_layer_line(
+                    patch_box, yaw, 'road_divider')
         
         all_dividers = []
-        for line in lane_dividers: #+ road_dividers:
+        for line in lane_dividers+ road_dividers:
             all_dividers += split_collections(line)
         # get ped crossings
         ped_crossings = []

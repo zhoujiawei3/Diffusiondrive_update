@@ -313,6 +313,24 @@ class BEVRender:
                 x = np.array([pt[0] for pt in pts])
                 y = np.array([pt[1] for pt in pts])
                 self.axes.plot(x, y, color=color, linewidth=3, marker='o', linestyle='-', markersize=7)
+        # for label, vector_list in vectors.items():
+        #     if label == 1:
+        #         # For label 1, use the same color for all points in each vector element
+        #         color_idx = 0
+        #         for vector in vector_list:
+        #             point_color = color_mapping[color_idx % len(color_mapping)]
+        #             pts = vector[:, :2]
+        #             self.axes.scatter(pts[:, 0], pts[:, 1], c=[point_color], s=50, marker='o', alpha=0.8)
+        #             color_idx += 1
+        #     elif label ==2:
+        #         print("hh2")
+        #     else:
+        #         color = COLOR_VECTORS[label]
+        #         for vector in vector_list:
+        #             pts = vector[:, :2]
+        #             x = np.array([pt[0] for pt in pts])
+        #             y = np.array([pt[1] for pt in pts])
+        #             self.axes.plot(x, y, color=color, linewidth=3, marker='o', linestyle='-', markersize=7)
 
     def draw_map_pred(self, result):
         if not (self.plot_choices['draw_pred'] and self.plot_choices['map'] and "vectors" in result):
